@@ -41,6 +41,7 @@ public final class DynamicArray {
             }
         }
         this.originalArray = temp;
+        this.size=this.count;
     }
 
     public  boolean removeAtIndex(int index){

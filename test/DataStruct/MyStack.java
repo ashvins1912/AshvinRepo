@@ -42,9 +42,13 @@ public class MyStack {
          removeFromIndex(this.topIndex);
      }
 
+
+     public  boolean isEmpty (){
+        return this.topIndex>-1?false:true;
+     }
    public void showStack() {
         for (int init=0;init<=this.topIndex;init++){
-            System.out.println(this.arrays[init]);
+            System.out.print(this.arrays[init]+"\t");
         }
 
    }
@@ -54,6 +58,7 @@ public class MyStack {
               System.out.println("Empty Stack");
           }
           else{
+              System.out.println(this.arrays[this.topIndex]);
           return this.arrays[this.topIndex];
           }
           return -1;
@@ -61,7 +66,7 @@ public class MyStack {
 
      private void  resizeStack(int index){
         if (index>-1 && index<=this.topIndex){
-            for(int init=index;init<=this.topIndex-1;){
+            for(int init=index;init<=this.topIndex;){
                 this.arrays[init]= this.arrays[++init];
             }
             this.topIndex--;

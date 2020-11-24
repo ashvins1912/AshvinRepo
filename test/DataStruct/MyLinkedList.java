@@ -1,4 +1,4 @@
-package com.test;
+package com.test.DataStruct;
 
 public class MyLinkedList {
     private  Node head;

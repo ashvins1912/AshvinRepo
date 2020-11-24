@@ -1,4 +1,4 @@
-package com.test;
+package com.test.DataStruct;
 
 public final class DynamicArray {
 
@@ -41,7 +41,6 @@ public final class DynamicArray {
             }
         }
         this.originalArray = temp;
-        this.size=this.count;
     }
 
     public  boolean removeAtIndex(int index){

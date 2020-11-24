@@ -1,4 +1,4 @@
-package com.test;
+package com.test.DataStruct;
 
 public  final class Node {
  Node nextNode;

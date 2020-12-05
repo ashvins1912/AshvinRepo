@@ -1,4 +1,4 @@
-package com.test.Hacker;
+package test.Hacker;
 
 /**
  * You are given a binary string, (string which contains 0's and 1's), You have to perform several operations on this string, in one operation choose a non-empty even length substring containing only 0's or only 1's and remove it from the string.

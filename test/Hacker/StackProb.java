@@ -1,4 +1,4 @@
-package com.test.Hacker;
+package test.Hacker;
 
 public class StackProb {
 }

@@ -1,4 +1,4 @@
-package com.test.Hacker;
+package test.Hacker;
 
 import java.util.ArrayList;
 import java.util.List;

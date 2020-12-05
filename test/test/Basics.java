@@ -1,4 +1,4 @@
-package com.test.test;
+package test.test;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 public final class Basics {

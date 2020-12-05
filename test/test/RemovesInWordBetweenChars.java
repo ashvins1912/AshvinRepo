@@ -1,5 +1,4 @@
-package com.test.test;
-
+package test.test;
 public class RemovesInWordBetweenChars {
 
     public static void main(String[] args) {

@@ -1,4 +1,4 @@
-package test.Hacker;
+package test.hackerEarthProb;
 
 public class ReverseStringRecursive {
 

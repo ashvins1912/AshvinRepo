@@ -1,4 +1,4 @@
-package test.DataStruct;
+package test.dataStructures;
 
 public final class DynamicArray {
 

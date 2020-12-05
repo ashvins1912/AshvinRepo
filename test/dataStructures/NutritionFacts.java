@@ -1,4 +1,4 @@
-package test.DataStruct;
+package test.dataStructures;
 
 // Builder Pattern
 public class NutritionFacts {

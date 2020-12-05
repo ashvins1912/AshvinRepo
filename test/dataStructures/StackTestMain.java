@@ -1,9 +1,4 @@
-package test.DataStruct;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Scanner;
+package test.dataStructures;
 
 public class StackTestMain {
     public static void main(String args[] )

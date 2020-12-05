@@ -1,4 +1,4 @@
-package test.Hacker;
+package test.hackerEarthProb;
 
 public class MainTest {
     public static void main(String[] args) {

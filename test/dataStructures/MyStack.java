@@ -1,4 +1,4 @@
-package test.DataStruct;
+package test.dataStructures;
  /**
   * push:It is used to add the element to the top of the stack. The size of the stack will be increased by 1 with every added element.
   *

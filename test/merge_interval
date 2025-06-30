@@ -1,0 +1,57 @@
+import java.time.LocalDate;
+import java.util.*;
+
+class Interval {
+    LocalDate startDate;
+    LocalDate endDate;
+
+    public Interval(LocalDate startDate, LocalDate endDate) {
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + startDate + " to " + endDate + "]";
+    }
+}
+
+public class IntervalMerger {
+
+    public static List<Interval> adjustIntervals(List<Interval> intervals) {
+        if (intervals == null || intervals.size() <= 1) return intervals;
+
+        // Sort by startDate
+        intervals.sort(Comparator.comparing(i -> i.startDate));
+        
+        List<Interval> result = new ArrayList<>();
+        result.add(intervals.get(0));
+
+        for (int i = 1; i < intervals.size(); i++) {
+            Interval prev = result.get(result.size() - 1);
+            Interval current = intervals.get(i);
+
+            // If current startDate is less than or equal to previous endDate
+            if (!current.startDate.isAfter(prev.endDate)) {
+                // Adjust previous end date to 1 day before current start date
+                prev.endDate = current.startDate.minusDays(1);
+            }
+
+            result.add(current);
+        }
+
+        return result;
+    }
+
+    public static void main(String[] args) {
+        List<Interval> intervals = Arrays.asList(
+            new Interval(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 10)),
+            new Interval(LocalDate.of(2024, 1, 10), LocalDate.of(2024, 1, 20)),
+            new Interval(LocalDate.of(2024, 1, 19), LocalDate.of(2024, 1, 25)),
+            new Interval(LocalDate.of(2024, 2, 1), LocalDate.of(2024, 2, 5))
+        );
+
+        List<Interval> adjusted = adjustIntervals(intervals);
+        adjusted.forEach(System.out::println);
+    }
+}

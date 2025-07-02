@@ -1,0 +1,48 @@
+public void validateAndInsertOptimized(List<ContractCode> contractCodes, ContractCode newCode) {
+    // Rule: EffDate must be strictly before TermDate
+    if (!newCode.getContractEffDate().isBefore(newCode.getContractTermDate())) {
+        throw new IntegrationInvalidException("Effective date must be before term date.");
+    }
+
+    // Sort once – in-place
+    contractCodes.sort(Comparator.comparing(ContractCode::getContractEffDate));
+
+    // Binary search or linear scan to find insert position
+    int insertIndex = 0;
+    for (; insertIndex < contractCodes.size(); insertIndex++) {
+        if (newCode.getContractEffDate().isBefore(contractCodes.get(insertIndex).getContractEffDate())) {
+            break;
+        }
+    }
+
+    // Get immediate neighbors (before and after) to check for conflict
+    ContractCode prev = insertIndex > 0 ? contractCodes.get(insertIndex - 1) : null;
+    ContractCode next = insertIndex < contractCodes.size() ? contractCodes.get(insertIndex) : null;
+
+    // Duplicate EffDate check
+    if ((prev != null && prev.getContractEffDate().isEqual(newCode.getContractEffDate())) ||
+        (next != null && next.getContractEffDate().isEqual(newCode.getContractEffDate()))) {
+        throw new IntegrationInvalidException("Duplicate Effective Date: " + newCode.getContractEffDate());
+    }
+
+    // 1. Check and possibly adjust overlap with previous
+    if (prev != null && !newCode.getContractEffDate().isAfter(prev.getContractTermDate())) {
+        LocalDate adjustedTerm = newCode.getContractEffDate().minusDays(1);
+
+        if (!adjustedTerm.isAfter(prev.getContractEffDate())) {
+            throw new IntegrationInvalidException("Cannot adjust previous contract: invalid term range.");
+        }
+
+        // Safe adjustment
+        prev.setContractTermDate(adjustedTerm);
+    }
+
+    // 2. Check overlap with next contract
+    if (next != null && !newCode.getContractTermDate().isBefore(next.getContractEffDate())) {
+        throw new IntegrationInvalidException("New contract overlaps with next contract.");
+    }
+
+    // Add and keep sorted
+    contractCodes.add(insertIndex, newCode);  // O(n) insert
+    log.info("Inserted contract: {} – {} | New size: {}", newCode.getContractEffDate(), newCode.getContractTermDate(), contractCodes.size());
+}

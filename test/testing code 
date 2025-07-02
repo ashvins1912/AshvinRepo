@@ -1,59 +1,58 @@
-import java.time.LocalDate;
-import java.util.*;
+public void validateAndInsertContractCode(List<ContractCode> existingList, ContractCode newCode) {
 
-public class ContractValidator {
+    // Filter out self (if updating)
+    existingList = existingList.stream()
+            .filter(obj -> !obj.getId().equals(newCode.getId()))
+            .collect(Collectors.toList());
 
-    public static void validateAndInsert(List<ContractCode> contractCodeList, ContractCode newContract) {
-        contractCodeList = new ArrayList<>(contractCodeList); // Defensive copy
-        contractCodeList.add(newContract);
+    // Add the new contract code for validation
+    existingList.add(newCode);
 
-        // Sort by effective date
-        contractCodeList.sort(Comparator.comparing(ContractCode::getContractEffDate));
+    // Sort list by Effective Date
+    existingList.sort(Comparator.comparing(ContractCode::getContractEffDate));
 
-        Set<LocalDate> effDates = new HashSet<>();
-        Set<String> effTermPairs = new HashSet<>();
+    List<ContractCode> validatedList = new ArrayList<>();
 
-        List<ContractCode> result = new ArrayList<>();
-
-        for (int i = 0; i < contractCodeList.size(); i++) {
-            ContractCode current = contractCodeList.get(i);
-            LocalDate eff = current.getContractEffDate();
-            LocalDate term = current.getContractTermDate();
-
-            if (!eff.isBefore(term)) {
-                throw new IntegrationInvalidException("EffDate must be before TermDate: " + eff + " - " + term);
-            }
-
-            if (!effDates.add(eff)) {
-                throw new IntegrationInvalidException("Duplicate EffDate found: " + eff);
-            }
-
-            String key = eff + "_" + term;
-            if (!effTermPairs.add(key)) {
-                throw new IntegrationInvalidException("Duplicate EffDate and TermDate pair: " + eff + " - " + term);
-            }
-
-            if (i > 0) {
-                ContractCode prev = result.get(result.size() - 1);
-                LocalDate prevEff = prev.getContractEffDate();
-                LocalDate prevTerm = prev.getContractTermDate();
-
-                if (!eff.isAfter(prevTerm)) {
-                    LocalDate adjustedTerm = eff.minusDays(1);
-                    if (!adjustedTerm.isBefore(prevEff)) {
-                        prev.setContractTermDate(adjustedTerm);
-                    } else {
-                        throw new IntegrationInvalidException("Overlap conflict cannot be resolved: " +
-                            prevEff + " - " + prevTerm + " vs " + eff + " - " + term);
-                    }
-                }
-            }
-
-            result.add(current);
+    for (ContractCode code : existingList) {
+        // Rule 1: EffDate should not equal TermDate
+        if (code.getContractEffDate().isEqual(code.getContractTermDate())) {
+            throw new IntegrationInvalidException("ContractEffDate and ContractTermDate cannot be the same: " + code.getContractEffDate());
         }
 
-        // Update the original list if needed
-        contractCodeList.clear();
-        contractCodeList.addAll(result);
+        // Rule 2: No duplicate EffDate
+        boolean duplicateEffDate = validatedList.stream()
+                .anyMatch(e -> e.getContractEffDate().isEqual(code.getContractEffDate()));
+
+        if (duplicateEffDate) {
+            throw new IntegrationInvalidException("Duplicate ContractEffDate found: " + code.getContractEffDate());
+        }
+
+        // Rule 3: No duplicate EffDate + TermDate combination
+        boolean duplicateEffAndTerm = validatedList.stream()
+                .anyMatch(e -> e.getContractEffDate().isEqual(code.getContractEffDate()) &&
+                        e.getContractTermDate().isEqual(code.getContractTermDate()));
+
+        if (duplicateEffAndTerm) {
+            throw new IntegrationInvalidException("Duplicate ContractEffDate and TermDate pair found: " +
+                    code.getContractEffDate() + " - " + code.getContractTermDate());
+        }
+
+        // Rule 4: Check for overlapping with existing validated entries
+        for (ContractCode existing : validatedList) {
+            // Overlap: Start is before existing's end && end is after existing's start
+            boolean overlaps = !(code.getContractEffDate().isAfter(existing.getContractTermDate()) ||
+                    code.getContractTermDate().isBefore(existing.getContractEffDate()));
+
+            if (overlaps) {
+                throw new IntegrationInvalidException("Contract period overlaps with existing: " +
+                        existing.getContractEffDate() + " - " + existing.getContractTermDate() +
+                        " vs " + code.getContractEffDate() + " - " + code.getContractTermDate());
+            }
+        }
+
+        validatedList.add(code);
     }
+
+    // At this point, validatedList contains all validated entries including the new one
+    log.info("All contract codes validated successfully. Count: {}", validatedList.size());
 }

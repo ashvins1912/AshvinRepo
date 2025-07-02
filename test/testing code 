@@ -1,41 +1,59 @@
-contractCodeList = contractCodeList.stream()
-    .filter(obj -> !obj.getId().equals(contractCode.getId()))
-    .collect(Collectors.toList());
+import java.time.LocalDate;
+import java.util.*;
 
-contractCodeList.add(contractCode);
+public class ContractValidator {
 
-// Sort list by effective date
-contractCodeList.sort(Comparator.comparing(ContractCode::getContractEffDate));
+    public static void validateAndInsert(List<ContractCode> contractCodeList, ContractCode newContract) {
+        contractCodeList = new ArrayList<>(contractCodeList); // Defensive copy
+        contractCodeList.add(newContract);
 
-List<ContractCode> result = new ArrayList<>();
-result.add(contractCodeList.get(0));
+        // Sort by effective date
+        contractCodeList.sort(Comparator.comparing(ContractCode::getContractEffDate));
 
-for (int i = 1; i < contractCodeList.size(); i++) {
-    ContractCode prev = result.get(result.size() - 1);
-    ContractCode current = contractCodeList.get(i);
+        Set<LocalDate> effDates = new HashSet<>();
+        Set<String> effTermPairs = new HashSet<>();
 
-    // 1. Basic check: EffDate must not be after TermDate
-    if (current.getContractEffDate().isAfter(current.getContractTermDate())) {
-        throw new IntegrationInvalidException("ContractEffDate cannot be after ContractTermDate.");
-    }
+        List<ContractCode> result = new ArrayList<>();
 
-    // 2. Duplicate effective date check
-    if (current.getContractEffDate().equals(prev.getContractEffDate())) {
-        throw new IntegrationInvalidException("Duplicate ContractEffDate found: " + current.getContractEffDate());
-    }
+        for (int i = 0; i < contractCodeList.size(); i++) {
+            ContractCode current = contractCodeList.get(i);
+            LocalDate eff = current.getContractEffDate();
+            LocalDate term = current.getContractTermDate();
 
-    // 3. Check for overlap
-    if (!current.getContractEffDate().isAfter(prev.getContractTermDate())) {
-        // Adjust previous term date to 1 day before current eff date
-        LocalDate adjustedTermDate = current.getContractEffDate().minusDays(1);
-        if (!adjustedTermDate.isBefore(prev.getContractEffDate())) {
-            prev.setContractTermDate(adjustedTermDate);
-        } else {
-            throw new IntegrationInvalidException("Contract date overlap cannot be resolved between: " +
-                    prev.getContractEffDate() + " - " + prev.getContractTermDate() + " and " +
-                    current.getContractEffDate() + " - " + current.getContractTermDate());
+            if (!eff.isBefore(term)) {
+                throw new IntegrationInvalidException("EffDate must be before TermDate: " + eff + " - " + term);
+            }
+
+            if (!effDates.add(eff)) {
+                throw new IntegrationInvalidException("Duplicate EffDate found: " + eff);
+            }
+
+            String key = eff + "_" + term;
+            if (!effTermPairs.add(key)) {
+                throw new IntegrationInvalidException("Duplicate EffDate and TermDate pair: " + eff + " - " + term);
+            }
+
+            if (i > 0) {
+                ContractCode prev = result.get(result.size() - 1);
+                LocalDate prevEff = prev.getContractEffDate();
+                LocalDate prevTerm = prev.getContractTermDate();
+
+                if (!eff.isAfter(prevTerm)) {
+                    LocalDate adjustedTerm = eff.minusDays(1);
+                    if (!adjustedTerm.isBefore(prevEff)) {
+                        prev.setContractTermDate(adjustedTerm);
+                    } else {
+                        throw new IntegrationInvalidException("Overlap conflict cannot be resolved: " +
+                            prevEff + " - " + prevTerm + " vs " + eff + " - " + term);
+                    }
+                }
+            }
+
+            result.add(current);
         }
-    }
 
-    result.add(current);
+        // Update the original list if needed
+        contractCodeList.clear();
+        contractCodeList.addAll(result);
+    }
 }

@@ -46,3 +46,10 @@ public void validateAndInsertOptimized(List<ContractCode> contractCodes, Contrac
     contractCodes.add(insertIndex, newCode);  // O(n) insert
     log.info("Inserted contract: {} – {} | New size: {}", newCode.getContractEffDate(), newCode.getContractTermDate(), contractCodes.size());
 }
+
+//
+SELECT *
+FROM contract_code
+WHERE contract_eff_date <= :newTermDate
+  AND contract_term_date >= :newEffDate
+ORDER BY contract_eff_date;

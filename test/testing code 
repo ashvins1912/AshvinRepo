@@ -1,0 +1,61 @@
+List<ContractCode> contractCodeList = contractCodeRepository.findContractCodeActiveEntries(contractCodeBts.getContractCode());
+
+// Exclude the same object if already in list
+contractCodeList = contractCodeList.stream()
+    .filter(obj -> !obj.getId().equals(contractCode.getId()))
+    .collect(Collectors.toList());
+
+// Add the new/updated contract code to the list
+contractCodeList.add(contractCode);
+
+log.info("Exiting code with contractCodeList size: {}", contractCodeList.size());
+
+ContractCode updatedContractCode = null;
+
+if (!contractCodeList.isEmpty()) {
+
+    log.info("Starting date segment logic for contract code: {}", contractCodeList);
+
+    List<ContractCode> result = new ArrayList<>();
+
+    // Sort by ContractEffDate
+    contractCodeList.sort(Comparator.comparing(ContractCode::getContractEffDate));
+
+    // Add first entry
+    result.add(contractCodeList.get(0));
+
+    for (int i = 1; i < contractCodeList.size(); i++) {
+        ContractCode prev = result.get(result.size() - 1);
+        ContractCode current = contractCodeList.get(i);
+
+        // Check for duplicate EffDate and TermDate
+        if (current.getContractEffDate().equals(prev.getContractEffDate()) &&
+            current.getContractTermDate().equals(prev.getContractTermDate())) {
+            throw new IntegrationInvalidException("Duplicate ContractEffDate and ContractTermDate found.");
+        }
+
+        // Validate date logic
+        if (current.getContractEffDate().isBefore(prev.getContractEffDate()) ||
+            current.getContractTermDate().isBefore(prev.getContractEffDate())) {
+            throw new IntegrationInvalidException("ContractEffDate or ContractTermDate is not valid.");
+        }
+
+        // Adjust if overlap occurs
+        if (!current.getContractEffDate().isAfter(prev.getContractTermDate())) {
+            LocalDate adjustedTermDate = current.getContractEffDate().minusDays(1);
+
+            // Only adjust if adjustedTermDate is still after prev.EffDate
+            if (!adjustedTermDate.isBefore(prev.getContractEffDate())) {
+                prev.setContractTermDate(adjustedTermDate);
+            } else {
+                throw new IntegrationInvalidException("Overlap detected and cannot adjust previous ContractTermDate.");
+            }
+        }
+
+        // Add current after validation
+        result.add(current);
+    }
+
+    // You can use result as the updated non-overlapping list
+    log.info("Updated contract code list after date adjustments: {}", result);
+}

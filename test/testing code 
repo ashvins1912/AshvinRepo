@@ -1,41 +1,58 @@
-public void validateAndInsertContractCode(List<ContractCode> existingList, ContractCode newEntry) {
-
-    // 1. Basic rule: EffDate must be before TermDate
+public void validateAndInsertWithTermDateAdjustment(List<ContractCode> existingList, ContractCode newEntry) {
+    // 1. Basic check
     if (!newEntry.getContractEffDate().isBefore(newEntry.getContractTermDate())) {
         throw new IntegrationInvalidException("Effective date must be before term date.");
     }
 
-    // 2. Sort existing list by EffDate
+    // 2. Sort existing entries by effective date
     existingList.sort(Comparator.comparing(ContractCode::getContractEffDate));
 
     for (ContractCode existing : existingList) {
-
-        // 3. Rule: No duplicate EffDate
+        // Rule: No duplicate EffDate
         if (existing.getContractEffDate().isEqual(newEntry.getContractEffDate())) {
-            throw new IntegrationInvalidException("Duplicate Effective Date: " + newEntry.getContractEffDate());
+            throw new IntegrationInvalidException("Duplicate effective date: " + newEntry.getContractEffDate());
         }
 
-        // 4. Rule: No duplicate (EffDate + TermDate)
+        // Rule: No duplicate EffDate+TermDate
         if (existing.getContractEffDate().isEqual(newEntry.getContractEffDate()) &&
             existing.getContractTermDate().isEqual(newEntry.getContractTermDate())) {
-            throw new IntegrationInvalidException("Duplicate Effective + Term Date pair: " + newEntry.getContractEffDate());
+            throw new IntegrationInvalidException("Duplicate contract period.");
         }
 
-        // 5. Overlap check:
+        // Check for overlap
         boolean overlaps = !(newEntry.getContractEffDate().isAfter(existing.getContractTermDate()) ||
                              newEntry.getContractTermDate().isBefore(existing.getContractEffDate()));
 
         if (overlaps) {
-            throw new IntegrationInvalidException(
-                "Contract date range overlaps with existing: [" +
-                existing.getContractEffDate() + " - " + existing.getContractTermDate() + "]"
-            );
+            // Try to adjust the existing Contract's TermDate
+            LocalDate adjustedTermDate = newEntry.getContractEffDate().minusDays(1);
+
+            // Validate adjusted term date
+            if (adjustedTermDate.isAfter(existing.getContractEffDate())) {
+                // Ensure adjusted does not conflict with other entries
+                for (ContractCode other : existingList) {
+                    if (!other.equals(existing)) {
+                        boolean stillOverlaps = !(adjustedTermDate.isBefore(other.getContractEffDate()) ||
+                                                  existing.getContractEffDate().isAfter(other.getContractTermDate()));
+                        if (stillOverlaps) {
+                            throw new IntegrationInvalidException("Adjusted contract date conflicts with another contract.");
+                        }
+                    }
+                }
+
+                // All clear – apply adjustment
+                existing.setContractTermDate(adjustedTermDate);
+                log.info("Adjusted existing contract: {} – {}", existing.getContractEffDate(), existing.getContractTermDate());
+
+            } else {
+                throw new IntegrationInvalidException("Cannot adjust contract safely — resulting term date is before effective date.");
+            }
         }
     }
 
-    // If all checks pass, insert the new contract
+    // Add the new entry
     existingList.add(newEntry);
     existingList.sort(Comparator.comparing(ContractCode::getContractEffDate));
 
-    log.info("Contract code inserted successfully. New list size: {}", existingList.size());
+    log.info("Contract code inserted successfully. Updated size: {}", existingList.size());
 }

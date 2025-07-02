@@ -1,0 +1,65 @@
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class ContractValidatorTest {
+
+    @Test
+    public void testShouldAllowNonOverlappingContracts() {
+        List<ContractCode> list = new ArrayList<>();
+        list.add(new ContractCode(LocalDate.of(2026, 1, 1), LocalDate.of(2039, 12, 31)));
+
+        ContractCode newEntry = new ContractCode(LocalDate.of(2026, 7, 1), LocalDate.of(2039, 12, 31));
+
+        ContractValidator.validateAndInsert(list, newEntry);
+
+        assertEquals(2, list.size());
+        assertEquals(LocalDate.of(2026, 6, 30), list.get(0).getContractTermDate());
+    }
+
+    @Test
+    public void testShouldThrowOnDuplicateEffTermDate() {
+        List<ContractCode> list = new ArrayList<>();
+        list.add(new ContractCode(LocalDate.of(2026, 1, 1), LocalDate.of(2039, 12, 31)));
+
+        ContractCode duplicate = new ContractCode(LocalDate.of(2026, 1, 1), LocalDate.of(2039, 12, 31));
+
+        assertThrows(IntegrationInvalidException.class, () -> {
+            ContractValidator.validateAndInsert(list, duplicate);
+        });
+    }
+
+    @Test
+    public void testThreeSegmentedContractsShouldPass() {
+        List<ContractCode> list = new ArrayList<>();
+        list.add(new ContractCode(LocalDate.of(2026, 1, 1), LocalDate.of(2039, 12, 31)));
+        ContractValidator.validateAndInsert(list, new ContractCode(LocalDate.of(2026, 4, 1), LocalDate.of(2039, 12, 31)));
+        ContractValidator.validateAndInsert(list, new ContractCode(LocalDate.of(2026, 7, 1), LocalDate.of(2039, 12, 31)));
+
+        assertEquals(3, list.size());
+        assertEquals(LocalDate.of(2026, 3, 31), list.get(0).getContractTermDate());
+        assertEquals(LocalDate.of(2026, 6, 30), list.get(1).getContractTermDate());
+    }
+
+    @Test
+    public void testEffDateEqualToTermDateShouldFail() {
+        List<ContractCode> list = new ArrayList<>();
+        ContractCode invalid = new ContractCode(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1));
+        assertThrows(IntegrationInvalidException.class, () -> {
+            ContractValidator.validateAndInsert(list, invalid);
+        });
+    }
+
+    @Test
+    public void testEffDateAfterTermDateShouldFail() {
+        List<ContractCode> list = new ArrayList<>();
+        ContractCode invalid = new ContractCode(LocalDate.of(2026, 1, 2), LocalDate.of(2026, 1, 1));
+        assertThrows(IntegrationInvalidException.class, () -> {
+            ContractValidator.validateAndInsert(list, invalid);
+        });
+    }
+}
